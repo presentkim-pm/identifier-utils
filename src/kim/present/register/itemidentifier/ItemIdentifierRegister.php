@@ -46,24 +46,28 @@ final class ItemIdentifierRegister{
             if($legacyMeta === -1){
                 // simple mapping - When the same item has multiple meta. ex) IronHoe
                 /** @see ItemTranslator::simpleCoreToNetMapping */
-                /** @see ItemTranslator::simpleNetToCoreMapping */
                 $this->simpleCoreToNetMapping[$legacyId] = $runtimeId;
+
+                /** @see ItemTranslator::simpleNetToCoreMapping */
                 $this->simpleNetToCoreMapping[$runtimeId] = $legacyId;
             }else{
                 // complex mapping - When items are classified according to meta. ex) Bucket
                 /** @see ItemTranslator::complexCoreToNetMapping */
-                /** @see ItemTranslator::complexNetToCoreMapping */
                 $this->complexCoreToNetMapping[$legacyId][$legacyMeta] = $runtimeId;
+
+                /** @see ItemTranslator::complexNetToCoreMapping */
                 $this->complexNetToCoreMapping[$runtimeId] = [$legacyId, $legacyMeta];
             }
         })->call(ItemTranslator::getInstance());
 
         (function() use ($stringId, $runtimeId){ //HACK : Closure bind hack to access inaccessible members
             /** @see ItemTypeDictionary::itemTypes */
-            /** @see ItemTypeDictionary::intToStringIdMap */
-            /** @see ItemTypeDictionary::stringToIntMap */
             $this->itemTypes[] = new ItemTypeEntry($stringId, $runtimeId, true);
+
+            /** @see ItemTypeDictionary::intToStringIdMap */
             $this->stringToIntMap[$stringId] = $runtimeId;
+
+            /** @see ItemTypeDictionary::stringToIntMap */
             $this->intToStringIdMap[$runtimeId] = $stringId;
         })->call(GlobalItemTypeDictionary::getInstance()->getDictionary());
     }
