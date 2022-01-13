@@ -38,7 +38,7 @@ use pocketmine\network\mcpe\protocol\serializer\ItemTypeDictionary;
 use pocketmine\network\mcpe\protocol\types\CacheableNbt;
 use pocketmine\network\mcpe\protocol\types\ItemTypeEntry;
 
-final class IdentifierTools{
+final class IdentifierUtils{
     /** @internal */
     public static int $runtimeIdCursor = 0xfff;
 
@@ -49,10 +49,10 @@ final class IdentifierTools{
         (function() use ($stringId, $legacyId, $legacyMeta){ //HACK : Closure bind hack to access inaccessible members
             $runtimeId = null;
             while($runtimeId === null){
-                if(IdentifierTools::$runtimeIdCursor >= 0xffff){
+                if(IdentifierUtils::$runtimeIdCursor >= 0xffff){
                     throw new OverflowException("There are no more item runtime ids available.");
                 }
-                $cursor = IdentifierTools::$runtimeIdCursor++;
+                $cursor = IdentifierUtils::$runtimeIdCursor++;
                 /**
                  * @see ItemTranslator::simpleNetToCoreMapping
                  * @see ItemTranslator::complexNetToCoreMapping
