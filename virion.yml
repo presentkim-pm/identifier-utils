@@ -1,8 +1,8 @@
 ---
-name: itemidentifier-register
-antigen: kim\present\register\itemidentifier
+name: identifier-utils
+antigen: kim\present\utils\identifier
 version: 0.0.1
 api: 4.0.0
 authors: [ PresentKim ]
-description: Library that performs the function of registering item identifier
+description: Library that performs the function of item and entity identifier
 ...
