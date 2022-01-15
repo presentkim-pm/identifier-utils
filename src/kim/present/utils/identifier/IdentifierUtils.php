@@ -32,6 +32,9 @@ declare(strict_types=1);
 namespace kim\present\utils\identifier;
 
 use OverflowException;
+use pocketmine\item\ItemFactory;
+use pocketmine\item\LegacyStringToItemParser;
+use pocketmine\item\StringToItemParser;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\network\mcpe\cache\StaticPacketCache;
 use pocketmine\network\mcpe\convert\GlobalItemTypeDictionary;
@@ -41,12 +44,38 @@ use pocketmine\network\mcpe\protocol\types\CacheableNbt;
 use pocketmine\network\mcpe\protocol\types\ItemTypeEntry;
 use RuntimeException;
 
+use function strrpos;
+use function substr;
+
 final class IdentifierUtils{
     private static int $itemRuntimeId = 1;
 
     private function __construct(){ }
 
     public static function registerItem(string $stringId, int $legacyId, int $legacyMeta = -1) : void{
+        /**
+         * Mapping String ID and Legacy ID to StringToItemParser and LegacyStringToItemParser
+         * that used to parse a string or ID to get an item object.
+         *
+         * @see StringToItemParser::override()
+         * @see LegacyStringToItemParser::addMapping()
+         */
+        (static function() use ($stringId, $legacyId, $legacyMeta){
+            $stringToItemParser = new StringToItemParser();
+            if($legacyMeta === -1){
+                $stringToItemParser->override($stringId, static fn() => ItemFactory::getInstance()->get($legacyId));
+            }else{
+                $getItemCallback = static fn() => ItemFactory::getInstance()->get($legacyId, $legacyMeta);
+                $stringToItemParser->override($stringId, $getItemCallback);
+                $stringToItemParser->override("$stringId:$legacyMeta", $getItemCallback);
+            }
+            $legacyStringToItemParser = LegacyStringToItemParser::getInstance();
+            $simpleStringId = substr($stringId, strrpos($stringId, ':') + 1);
+            $legacyStringToItemParser->addMapping($stringId, $legacyId);
+            $legacyStringToItemParser->addMapping((string) $legacyId, $legacyId);
+            $legacyStringToItemParser->addMapping($simpleStringId, $legacyId);
+        })();
+
         /**
          * Gets the item Runtime ID to use for the item currently being added
          * Based on not registered in ItemTranslator
