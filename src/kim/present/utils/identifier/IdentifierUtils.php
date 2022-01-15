@@ -42,7 +42,6 @@ use pocketmine\network\mcpe\convert\ItemTranslator;
 use pocketmine\network\mcpe\protocol\serializer\ItemTypeDictionary;
 use pocketmine\network\mcpe\protocol\types\CacheableNbt;
 use pocketmine\network\mcpe\protocol\types\ItemTypeEntry;
-use RuntimeException;
 
 use function strrpos;
 use function substr;
@@ -135,11 +134,7 @@ final class IdentifierUtils{
         $availableActorIdentifiersPacket = StaticPacketCache::getInstance()->getAvailableActorIdentifiers();
         /** @var CompoundTag $identifiersNbt */
         $identifiersNbt = $availableActorIdentifiersPacket->identifiers->getRoot();
-        $idList = $identifiersNbt->getListTag("idlist");
-        if($idList === null){
-            throw new RuntimeException("Not found idlist tag in AvailableActorIdentifiersPacket");
-        }
-        $idList->push(CompoundTag::create()->setString("id", $entityIdentifier));
+        $identifiersNbt->getListTag("idlist")?->push(CompoundTag::create()->setString("id", $entityIdentifier));
         $availableActorIdentifiersPacket->identifiers = new CacheableNbt($identifiersNbt);
     }
 }
