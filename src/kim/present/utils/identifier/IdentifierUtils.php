@@ -51,6 +51,35 @@ final class IdentifierUtils{
 
     private function __construct(){ }
 
+    /**
+     * Gets the next item Runtime ID based on not registered in ItemTranslator
+     *
+     * @see ItemTranslator::simpleNetToCoreMapping
+     * @see ItemTranslator::complexNetToCoreMapping
+     */
+    public static function nextItemRuntimeId() : int{
+        $runtimeId = null;
+        $itemTranslator = ItemTranslator::getInstance();
+        while($runtimeId === null){
+            if(self::$itemRuntimeId >= 0xffff){
+                throw new OverflowException("There are no more item runtime ids available.");
+            }
+            $cursor = self::$itemRuntimeId++;
+            $runtimeId = (function() use ($cursor){ //HACK : Closure bind hack to access inaccessible members
+                return !isset($this->simpleNetToCoreMapping[$cursor]) && !isset($this->complexNetToCoreMapping[$cursor]) ? $cursor : null;
+            })->call($itemTranslator);
+        }
+        return $runtimeId;
+    }
+
+    /**
+     * Returns a namespace removed identifier.
+     * ex) minecraft:diamond => diamond
+     */
+    public static function removeNamespace(string $stringId) : string{
+        return substr($stringId, strrpos($stringId, ":") + 1);
+    }
+
     public static function registerItem(string $stringId, int $legacyId, int $legacyMeta = -1) : void{
         /**
          * Mapping String ID and Legacy ID to StringToItemParser and LegacyStringToItemParser
@@ -69,33 +98,13 @@ final class IdentifierUtils{
                 $stringToItemParser->override("$stringId:$legacyMeta", $getItemCallback);
             }
             $legacyStringToItemParser = LegacyStringToItemParser::getInstance();
-            $simpleStringId = substr($stringId, strrpos($stringId, ':') + 1);
+            $simpleStringId = self::removeNamespace($stringId);
             $legacyStringToItemParser->addMapping($stringId, $legacyId);
             $legacyStringToItemParser->addMapping((string) $legacyId, $legacyId);
             $legacyStringToItemParser->addMapping($simpleStringId, $legacyId);
         })();
 
-        /**
-         * Gets the item Runtime ID to use for the item currently being added
-         * Based on not registered in ItemTranslator
-         *
-         * @see ItemTranslator::simpleNetToCoreMapping
-         * @see ItemTranslator::complexNetToCoreMapping
-         */
-        $runtimeId = null;
-        (static function() use (&$runtimeId){
-            $itemTranslator = ItemTranslator::getInstance();
-            while($runtimeId === null){
-                if(self::$itemRuntimeId >= 0xffff){
-                    throw new OverflowException("There are no more item runtime ids available.");
-                }
-                $cursor = self::$itemRuntimeId++;
-                $runtimeId = (function() use ($cursor){ //HACK : Closure bind hack to access inaccessible members
-                    return !isset($this->simpleNetToCoreMapping[$cursor]) && !isset($this->complexNetToCoreMapping[$cursor]) ? $cursor : null;
-                })->call($itemTranslator);
-            }
-        })();
-
+        $runtimeId = self::nextItemRuntimeId();
         /**
          * Cross-Mapping Runtime ID and Legacy ID to ItemTranslator
          *
@@ -130,11 +139,11 @@ final class IdentifierUtils{
         })->call(GlobalItemTypeDictionary::getInstance()->getDictionary());
     }
 
-    public static function registerEntity(string $entityIdentifier) : void{
+    public static function registerEntity(string $stringId) : void{
         $availableActorIdentifiersPacket = StaticPacketCache::getInstance()->getAvailableActorIdentifiers();
         /** @var CompoundTag $identifiersNbt */
         $identifiersNbt = $availableActorIdentifiersPacket->identifiers->getRoot();
-        $identifiersNbt->getListTag("idlist")?->push(CompoundTag::create()->setString("id", $entityIdentifier));
+        $identifiersNbt->getListTag("idlist")?->push(CompoundTag::create()->setString("id", $stringId));
         $availableActorIdentifiersPacket->identifiers = new CacheableNbt($identifiersNbt);
     }
 }
