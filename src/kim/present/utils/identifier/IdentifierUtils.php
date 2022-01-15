@@ -94,7 +94,11 @@ final class IdentifierUtils{
         $availableActorIdentifiersPacket = StaticPacketCache::getInstance()->getAvailableActorIdentifiers();
         /** @var CompoundTag $identifiersNbt */
         $identifiersNbt = $availableActorIdentifiersPacket->identifiers->getRoot();
-        $identifiersNbt->getListTag("idlist")->push(CompoundTag::create()->setString("id", $entityIdentifier));
+        $idList = $identifiersNbt->getListTag("idlist");
+        if($idList === null){
+            throw new RuntimeException("Not found idlist tag in AvailableActorIdentifiersPacket");
+        }
+        $idList->push(CompoundTag::create()->setString("id", $entityIdentifier));
         $availableActorIdentifiersPacket->identifiers = new CacheableNbt($identifiersNbt);
     }
 }
