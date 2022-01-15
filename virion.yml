@@ -1,7 +1,7 @@
 ---
 name: identifier-utils
 antigen: kim\present\utils\identifier
-version: 0.0.1
+version: 1.0.0
 api: 4.0.0
 authors: [ PresentKim ]
 description: Library that performs the function of item and entity identifier
