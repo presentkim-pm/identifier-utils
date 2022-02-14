@@ -24,13 +24,13 @@
  * @noinspection PhpUnused
  * @noinspection SpellCheckingInspection
  * @noinspection PhpDeprecationInspection
- * @noinspection PhpUndefinedFieldInspection
  */
 
 declare(strict_types=1);
 
 namespace kim\present\utils\identifier;
 
+use Closure;
 use OverflowException;
 use pocketmine\item\ItemFactory;
 use pocketmine\item\LegacyStringToItemParser;
@@ -65,9 +65,12 @@ final class IdentifierUtils{
                 throw new OverflowException("There are no more item runtime ids available.");
             }
             $cursor = self::$itemRuntimeId++;
-            $runtimeId = (function() use ($cursor){ //HACK : Closure bind hack to access inaccessible members
-                return !isset($this->simpleNetToCoreMapping[$cursor]) && !isset($this->complexNetToCoreMapping[$cursor]) ? $cursor : null;
-            })->call($itemTranslator);
+
+            $runtimeId = Closure::bind( //HACK: Closure bind hack to access inaccessible members
+                closure: static fn(ItemTranslator $tr) => !isset($tr->simpleNetToCoreMapping[$cursor]) && !isset($tr->complexNetToCoreMapping[$cursor]) ? $cursor : null,
+                newThis: null,
+                newScope: ItemTranslator::class
+            )($itemTranslator);
         }
         return $runtimeId;
     }
@@ -81,13 +84,7 @@ final class IdentifierUtils{
     }
 
     public static function registerItem(string $stringId, int $legacyId, int $legacyMeta = -1) : void{
-        /**
-         * Mapping String ID and Legacy ID to StringToItemParser and LegacyStringToItemParser
-         * that used to parse a string or ID to get an item object.
-         *
-         * @see StringToItemParser::override()
-         * @see LegacyStringToItemParser::addMapping()
-         */
+        /** Mapping String ID and Legacy ID to StringToItemParser and LegacyStringToItemParser */
         (static function() use ($stringId, $legacyId, $legacyMeta){
             $stringToItemParser = new StringToItemParser();
             if($legacyMeta === -1){
@@ -105,38 +102,33 @@ final class IdentifierUtils{
         })();
 
         $runtimeId = self::nextItemRuntimeId();
-        /**
-         * Cross-Mapping Runtime ID and Legacy ID to ItemTranslator
-         *
-         * @see ItemTranslator::simpleCoreToNetMapping
-         * @see ItemTranslator::simpleNetToCoreMapping
-         * @see ItemTranslator::complexCoreToNetMapping
-         * @see ItemTranslator::complexNetToCoreMapping
-         */
-        (function() use ($runtimeId, $legacyId, $legacyMeta){ //HACK : Closure bind hack to access inaccessible members
-            if($legacyMeta === -1){
-                // simple mapping - When the same item has multiple meta. ex) IronHoe
-                $this->simpleCoreToNetMapping[$legacyId] = $runtimeId;
-                $this->simpleNetToCoreMapping[$runtimeId] = $legacyId;
-            }else{
-                // complex mapping - When items are classified according to meta. ex) Bucket
-                $this->complexCoreToNetMapping[$legacyId][$legacyMeta] = $runtimeId;
-                $this->complexNetToCoreMapping[$runtimeId] = [$legacyId, $legacyMeta];
-            }
-        })->call(ItemTranslator::getInstance());
+        /** Cross-Mapping Runtime ID and Legacy ID to ItemTranslator */
+        Closure::bind( //HACK: Closure bind hack to access inaccessible members
+            closure: static function(ItemTranslator $translator) use ($runtimeId, $legacyId, $legacyMeta){
+                if($legacyMeta === -1){
+                    // simple mapping - When the same item has multiple meta. ex) IronHoe
+                    $translator->simpleCoreToNetMapping[$legacyId] = $runtimeId;
+                    $translator->simpleNetToCoreMapping[$runtimeId] = $legacyId;
+                }else{
+                    // complex mapping - When items are classified according to meta. ex) Bucket
+                    $translator->complexCoreToNetMapping[$legacyId][$legacyMeta] = $runtimeId;
+                    $translator->complexNetToCoreMapping[$runtimeId] = [$legacyId, $legacyMeta];
+                }
+            },
+            newThis: null,
+            newScope: ItemTranslator::class
+        )(ItemTranslator::getInstance());
 
-        /**
-         * Cross-Mapping Runtime ID and String ID to ItemTypeDictionary
-         *
-         * @see ItemTypeDictionary::itemTypes
-         * @see ItemTypeDictionary::stringToIntMap
-         * @see ItemTypeDictionary::intToStringIdMap
-         */
-        (function() use ($stringId, $runtimeId){ //HACK : Closure bind hack to access inaccessible members
-            $this->itemTypes[] = new ItemTypeEntry($stringId, $runtimeId, true);
-            $this->stringToIntMap[$stringId] = $runtimeId;
-            $this->intToStringIdMap[$runtimeId] = $stringId;
-        })->call(GlobalItemTypeDictionary::getInstance()->getDictionary());
+        /** Cross-Mapping Runtime ID and String ID to ItemTypeDictionary */
+        Closure::bind( //HACK: Closure bind hack to access inaccessible members
+            closure: static function(ItemTypeDictionary $dictionary) use ($stringId, $runtimeId){
+                $dictionary->itemTypes[] = new ItemTypeEntry($stringId, $runtimeId, true);
+                $dictionary->stringToIntMap[$stringId] = $runtimeId;
+                $dictionary->intToStringIdMap[$runtimeId] = $stringId;
+            },
+            newThis: null,
+            newScope: ItemTypeDictionary::class
+        )(GlobalItemTypeDictionary::getInstance()->getDictionary());
     }
 
     public static function registerEntity(string $stringId) : void{
